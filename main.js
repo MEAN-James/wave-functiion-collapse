@@ -173,7 +173,6 @@ class Canvas {
       this.cellSize
     );
 
-    // look at and update the surrounding 4 tiles
     for (let direction in nextCells) {
       const { i, j } = nextCells[direction];
       let targetCell = null;
@@ -184,18 +183,14 @@ class Canvas {
       seenCells.push(targetCell);
     }
 
-    // calcualte lowest entropy value
     minEntropy = Math.min(...seenCells.map(({ entropy }) => entropy));
 
-    // Filter out already collapsed cells and any cells with more entropy then the lowest entropy of the seen cells.
     possibleCells = seenCells.filter(
       (cell) => cell.entropy === minEntropy && !cell.collapsed
     );
 
-    // pick a random cell from what's left
     nextCell = possibleCells[Utils.randomIndex(0, possibleCells.length)];
 
-    // collapse the cell and draw it
     nextCell.collapseCell();
     this.context.drawImage(
       nextCell.tile.image,
@@ -255,7 +250,7 @@ class Cell {
         case "right":
           match = cellA.tile.right === Tile.reverseEdge(tile.left);
           break;
-        case "bottom": // why is this not matching the right tiles?
+        case "bottom":
           match = cellA.tile.bottom === Tile.reverseEdge(tile.top);
           break;
         case "left":
