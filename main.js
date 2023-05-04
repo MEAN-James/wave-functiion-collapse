@@ -28,8 +28,10 @@ class ImageObject {
     const { size } = srcImageObject;
     let width = size;
     let height = size;
+
     emptyCanvas.width = width;
     emptyCanvas.height = height;
+
     switch (rotations % 4) {
       case 0:
         break;
@@ -46,8 +48,10 @@ class ImageObject {
       default:
         break;
     }
+
     ctx.rotate(rotations * (1 / 2) * Math.PI);
     ctx.drawImage(srcImageObject.image, 0, 0, width, height);
+
     return ImageObject.loadImage(
       new ImageObject(emptyCanvas.toDataURL(), edges, size),
       (imageObj) => {
@@ -160,6 +164,7 @@ class Canvas {
     let nextCell = null;
 
     randomCell.collapseCell();
+    seenCells.push(randomCell);
     this.context.drawImage(
       randomCell.tile.image,
       randomCol * this.cellSize,
@@ -168,6 +173,7 @@ class Canvas {
       this.cellSize
     );
 
+    // look at and update the surrounding 4 tiles
     for (let direction in nextCells) {
       const { i, j } = nextCells[direction];
       let targetCell = null;
@@ -178,14 +184,19 @@ class Canvas {
       seenCells.push(targetCell);
     }
 
+    // calcualte lowest entropy value
     minEntropy = Math.min(...seenCells.map(({ entropy }) => entropy));
+
+    // Filter out already collapsed cells and any cells with more entropy then the lowest entropy of the seen cells.
     possibleCells = seenCells.filter(
       (cell) => cell.entropy === minEntropy && !cell.collapsed
     );
 
+    // pick a random cell from what's left
     nextCell = possibleCells[Utils.randomIndex(0, possibleCells.length)];
-    nextCell.collapseCell();
 
+    // collapse the cell and draw it
+    nextCell.collapseCell();
     this.context.drawImage(
       nextCell.tile.image,
       nextCell.j * this.cellSize,
@@ -244,8 +255,9 @@ class Cell {
         case "right":
           match = cellA.tile.right === Tile.reverseEdge(tile.left);
           break;
-        case "bottom":
+        case "bottom": // why is this not matching the right tiles?
           match = cellA.tile.bottom === Tile.reverseEdge(tile.top);
+          break;
         case "left":
           match = cellA.tile.left === Tile.reverseEdge(tile.right);
           break;
