@@ -89,9 +89,12 @@ class Canvas {
     this.height = window.innerHeight;
     this.canvas.width = this.width;
     this.canvas.height = this.height;
+    this.cellSize = cellSize;
     this.images = [];
     this.grid = [];
-    this.cellSize = cellSize;
+    this.seenCells = [];
+    this.tilesToDraw = [];
+    this.lastCell = null;
     this.nRows =
       Utils.roundToNearist(this.height, this.cellSize) / this.cellSize;
     this.nCols =
@@ -117,20 +120,32 @@ class Canvas {
         `${PATH}/T-Shape.png`,
         ["AAA", "ABA", "ABA", "ABA"],
         this.cellSize
-      ),
-      new ImageObject(
-        `${PATH}/Straight.png`,
-        ["AAA", "ABA", "AAA", "ABA"],
-        this.cellSize
       )
+      // new ImageObject(
+      //   `${PATH}/Straight.png`,
+      //   ["AAA", "ABA", "AAA", "ABA"],
+      //   this.cellSize
+      // )
+      // new ImageObject(
+      //   `${PATH}/Corner.png`,
+      //   ["ABA", "ABA", "AAA", "AAA"],
+      //   this.cellSize
+      // )
     );
 
     try {
       await ImageObject.loadImages(imageSrcs, this.images);
+      // T-Shape Rotations
       await ImageObject.createRotatedImage(this.images[2], 1, this.images, 3);
       await ImageObject.createRotatedImage(this.images[2], 2, this.images, 4);
       await ImageObject.createRotatedImage(this.images[2], 3, this.images, 5);
-      await ImageObject.createRotatedImage(this.images[6], 1, this.images, 7);
+      // Straight Shape Rotations
+      // await ImageObject.createRotatedImage(this.images[5], 1, this.images, 7);
+      // Corner Shape Rotations
+      // await ImageObject.createRotatedImage(this.images[8], 1, this.images, 9);
+      // await ImageObject.createRotatedImage(this.images[8], 2, this.images, 9);
+      // await ImageObject.createRotatedImage(this.images[8], 3, this.images, 9);
+
       callback();
     } catch (error) {
       console.error(error);
@@ -138,40 +153,40 @@ class Canvas {
   }
 
   initGrid() {
-    this.context.strokeStyle = "#909";
     for (let i = 0; i < this.nRows; i++) {
       this.grid.push(new Array(this.nCols));
       for (let j = 0; j < this.nCols; j++) {
         this.grid[i][j] = new Cell(i, j, this.images, this.cellSize);
-        this.context.strokeRect(
-          j * this.cellSize,
-          i * this.cellSize,
-          this.cellSize,
-          this.cellSize
-        );
       }
     }
+  }
+
+  placeTile(cell) {
+    this.context.drawImage(
+      cell.tile.image,
+      cell.j * this.cellSize,
+      cell.i * this.cellSize,
+      this.cellSize,
+      this.cellSize
+    );
   }
 
   generateSeedTile() {
     const randomRow = Utils.randomIndex(0, this.nRows);
     const randomCol = Utils.randomIndex(0, this.nCols);
     const randomCell = this.grid[randomRow][randomCol];
-    const nextCells = randomCell.getNextCells();
-    const seenCells = [];
-    let possibleCells = [];
-    let minEntropy = 0;
-    let nextCell = null;
-
     randomCell.collapseCell();
-    seenCells.push(randomCell);
-    this.context.drawImage(
-      randomCell.tile.image,
-      randomCol * this.cellSize,
-      randomRow * this.cellSize,
-      this.cellSize,
-      this.cellSize
-    );
+    this.seenCells.push(randomCell);
+    this.tilesToDraw.push(randomCell);
+    this.lastCell = randomCell;
+    return randomCell;
+  }
+
+  collapse(lastCell) {
+    const nextCells = lastCell.getNextCells();
+    let possibleCells = [];
+    let minEntropy = 8;
+    let nextCell = null;
 
     for (let direction in nextCells) {
       const { i, j } = nextCells[direction];
@@ -179,26 +194,32 @@ class Canvas {
 
       if (i >= this.nRows || i < 0 || j >= this.nCols || j < 0) continue;
       targetCell = this.grid[i][j];
-      Cell.updateCell(randomCell, targetCell, direction);
-      seenCells.push(targetCell);
+      Cell.updateCell(lastCell, targetCell, direction);
+
+      if (this.seenCells.indexOf(targetCell) === -1) {
+        this.seenCells.push(targetCell);
+      }
     }
 
-    minEntropy = Math.min(...seenCells.map(({ entropy }) => entropy));
+    for (let i = this.seenCells.length - 1; i >= 0; --i) {
+      if (this.seenCells[i].collapsed === true) {
+        this.seenCells.splice(i, 1);
+      }
+    }
 
-    possibleCells = seenCells.filter(
-      (cell) => cell.entropy === minEntropy && !cell.collapsed
+    minEntropy = Math.min(...this.seenCells.map(({ entropy }) => entropy));
+    possibleCells = this.seenCells.filter(
+      (cell) => cell.entropy === minEntropy
     );
 
     nextCell = possibleCells[Utils.randomIndex(0, possibleCells.length)];
-
+    if (!nextCell) {
+      return false;
+    }
     nextCell.collapseCell();
-    this.context.drawImage(
-      nextCell.tile.image,
-      nextCell.j * this.cellSize,
-      nextCell.i * this.cellSize,
-      this.cellSize,
-      this.cellSize
-    );
+    this.tilesToDraw.push(nextCell);
+    this.lastCell = nextCell;
+    return lastCell;
   }
 }
 
@@ -280,8 +301,31 @@ class Cell {
   }
 }
 
-const c = new Canvas("canvas", 75);
+const c = new Canvas("canvas", 24);
 c.preloadImages(() => {
+  let animation = null;
   c.initGrid();
   c.generateSeedTile();
+
+  function aniamte() {
+    let currCell = c.collapse(c.lastCell);
+    if (!currCell) {
+      clearInterval(animation);
+      return;
+    }
+    c.context.clearRect(0, 0, c.width, c.height);
+    c.tilesToDraw.forEach((tile) => c.placeTile(tile));
+  }
+  animation = setInterval(aniamte);
 });
+
+/*
+idea:
+  have a range of numbers to pick fomr at random that will determin the duration of a seed
+  pick a new seed with a new duration.
+
+known issues: there is a chacne with certain tile sets to run into a conflict with tiles where 
+  there is 0 possible tiles to be placed.
+
+  To fix this wwe should either impliment backtracking or lookahead.
+*/
