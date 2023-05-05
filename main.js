@@ -1,3 +1,14 @@
+/*
+idea:
+  have a range of numbers to pick fomr at random that will determin the duration of a seed
+  pick a new seed with a new duration.
+
+known issues: there is a chance with certain tile sets to run into a conflict with tiles where 
+  there is 0 possible tiles to be placed.
+
+  To fix this we should either impliment backtracking or lookahead.
+*/
+
 const Utils = {
   roundToNearist: (value, nearest) => Math.round(value / nearest) * nearest,
   randomInt: (min, max) => Math.floor(min + Math.random() * (max - min + 1)),
@@ -318,14 +329,3 @@ c.preloadImages(() => {
   }
   animation = setInterval(aniamte);
 });
-
-/*
-idea:
-  have a range of numbers to pick fomr at random that will determin the duration of a seed
-  pick a new seed with a new duration.
-
-known issues: there is a chance with certain tile sets to run into a conflict with tiles where 
-  there is 0 possible tiles to be placed.
-
-  To fix this we should either impliment backtracking or lookahead.
-*/
