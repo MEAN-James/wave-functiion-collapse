@@ -324,8 +324,8 @@ idea:
   have a range of numbers to pick fomr at random that will determin the duration of a seed
   pick a new seed with a new duration.
 
-known issues: there is a chacne with certain tile sets to run into a conflict with tiles where 
+known issues: there is a chance with certain tile sets to run into a conflict with tiles where 
   there is 0 possible tiles to be placed.
 
-  To fix this wwe should either impliment backtracking or lookahead.
+  To fix this we should either impliment backtracking or lookahead.
 */
